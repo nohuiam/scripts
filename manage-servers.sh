@@ -6,10 +6,29 @@
 set -e
 
 # Server definitions: name|directory|start_command|udp_port|http_port|ws_port
+# Use "-" for ports that don't exist (e.g., HTTP-only servers have no UDP/WS)
 SERVERS=(
-    "bonzai-bloat-buster|/Users/macbook/Documents/claude_home/repo/bonzai-bloat-buster|node dist/index.js|3008|8008|9008"
-    "intelligentrouter|/Users/macbook/Documents/claude_home/repo/intelligentrouter|node dist/index.js|3020|8020|9020"
+    # Full HTTP + WebSocket servers (sorted by UDP port)
+    "context-guardian|/Users/macbook/Documents/claude_home/repo/imminenceV2/context-guardian|node src/index.js|3001|8001|9001"
+    "quartermaster|/Users/macbook/Documents/claude_home/repo/Quartermaster/quartermaster|node src/index.js|3002|8002|9002"
+    "snapshot|/Users/macbook/Documents/claude_home/repo/snapSHOT|node src/index.js|3003|8003|9003"
+    "catasorter|/Users/macbook/Documents/claude_home/repo/Catasorter|node src/index.js|3005|8005|9005"
     "smart-file-organizer|/Users/macbook/Documents/claude_home/repo/smart_file_organizer|MCP_MODE=true node src/server.js|3007|8007|9007"
+    "bonzai-bloat-buster|/Users/macbook/Documents/claude_home/repo/bonzai-bloat-buster|node dist/index.js|3008|8008|9008"
+    "enterspect|/Users/macbook/Documents/claude_home/repo/EnterSpect|node dist/index.js|3009|8009|9009"
+    "neurogenesis-engine|/Users/macbook/Documents/claude_home/repo/neurogenesis-engine|node src/index.js|3010|8010|9010"
+    "trinity-coordinator|/Users/macbook/Documents/claude_home/repo/trinitycoordinator|node dist/index.js|3012|8012|9012"
+    "project-context|/Users/macbook/Documents/claude_home/repo/project-context|node dist/index.js|3016|8016|9016"
+    "knowledge-curator|/Users/macbook/Documents/claude_home/repo/knowledge-curator|node dist/index.js|3017|8017|9017"
+    "pk-manager|/Users/macbook/Documents/claude_home/repo/pk-manager|node dist/index.js|3018|8018|9018"
+    "intelligentrouter|/Users/macbook/Documents/claude_home/repo/intelligentrouter|node dist/index.js|3020|8020|9020"
+    "verifier-mcp|/Users/macbook/Documents/claude_home/repo/verifier-mcp|node dist/index.js|3021|8021|9021"
+
+    # HTTP-only servers (no UDP/WS)
+    "looker|/Users/macbook/Documents/claude_home/repo/looker-mcp|node dist/index.js|-|8006|-"
+    "chronos-synapse|/Users/macbook/Documents/claude_home/repo/Chronos_Synapse|node dist/index.js|-|8011|-"
+    "niws-server|/Users/macbook/Documents/claude_home/repo/niws-server|node dist/index.js|-|8015|-"
+    "research-bus|/Users/macbook/Documents/claude_home/repo/research-bus|node dist/index.js|-|8019|-"
 )
 
 # Colors for output
@@ -88,9 +107,9 @@ stop_server() {
 
     local stopped=false
 
-    # Try to kill by port
+    # Try to kill by port (skip "-" ports)
     for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
-        if port_in_use "$port"; then
+        if [[ "$port" != "-" ]] && port_in_use "$port"; then
             kill_port "$port"
             stopped=true
         fi
@@ -101,10 +120,10 @@ stop_server() {
 
     sleep 1
 
-    # Verify stopped
+    # Verify stopped (skip "-" ports)
     local still_running=false
     for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
-        if port_in_use "$port"; then
+        if [[ "$port" != "-" ]] && port_in_use "$port"; then
             still_running=true
             log_warning "Port $port still in use"
         fi
@@ -129,9 +148,9 @@ start_server() {
 
     log_info "Starting $SERVER_NAME..."
 
-    # Check if ports are free
+    # Check if ports are free (skip "-" ports)
     for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
-        if port_in_use "$port"; then
+        if [[ "$port" != "-" ]] && port_in_use "$port"; then
             log_warning "Port $port in use, killing process..."
             kill_port "$port"
             sleep 1
@@ -149,8 +168,11 @@ start_server() {
     # Wait for startup
     sleep 3
 
-    # Verify started by checking HTTP port
-    if port_in_use "$HTTP_PORT"; then
+    # Verify started by checking HTTP port (if it exists)
+    if [[ "$HTTP_PORT" == "-" ]]; then
+        # No HTTP port - just report started
+        log_success "$SERVER_NAME started (PID: $pid)"
+    elif port_in_use "$HTTP_PORT"; then
         log_success "$SERVER_NAME started (PID: $pid, HTTP: $HTTP_PORT)"
 
         # Test health endpoint
@@ -190,9 +212,11 @@ status_server() {
 
     local running=false
 
-    # Check each port
+    # Check each port (skip "-" ports)
     for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
-        if port_in_use "$port"; then
+        if [[ "$port" == "-" ]]; then
+            continue
+        elif port_in_use "$port"; then
             local pid=$(get_pid_on_port "$port")
             echo -e "Port $port: ${GREEN}IN USE${NC} (PID: $pid)"
             running=true
@@ -201,8 +225,8 @@ status_server() {
         fi
     done
 
-    # Test health if HTTP port is up
-    if port_in_use "$HTTP_PORT"; then
+    # Test health if HTTP port is up (and exists)
+    if [[ "$HTTP_PORT" != "-" ]] && port_in_use "$HTTP_PORT"; then
         local health=$(curl -s "http://localhost:$HTTP_PORT/health" 2>/dev/null || echo "")
         if [[ -n "$health" ]]; then
             echo -e "Health: ${GREEN}OK${NC}"
