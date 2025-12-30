@@ -1,0 +1,308 @@
+#!/bin/bash
+
+# Server Management Script for BOP/Imminence MCP Servers
+# Usage: ./manage-servers.sh [start|stop|restart|status] [server-name|all]
+
+set -e
+
+# Server definitions: name|directory|start_command|udp_port|http_port|ws_port
+SERVERS=(
+    "bonzai-bloat-buster|/Users/macbook/Documents/claude_home/repo/bonzai-bloat-buster|node dist/index.js|3008|8008|9008"
+    "intelligentrouter|/Users/macbook/Documents/claude_home/repo/intelligentrouter|node dist/index.js|3020|8020|9020"
+    "smart-file-organizer|/Users/macbook/Documents/claude_home/repo/smart_file_organizer|MCP_MODE=true node src/server.js|3007|8007|9007"
+)
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[OK]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Parse server definition
+parse_server() {
+    local def="$1"
+    IFS='|' read -r SERVER_NAME SERVER_DIR SERVER_CMD UDP_PORT HTTP_PORT WS_PORT <<< "$def"
+}
+
+# Find server definition by name
+find_server() {
+    local name="$1"
+    for server in "${SERVERS[@]}"; do
+        parse_server "$server"
+        if [[ "$SERVER_NAME" == "$name" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Check if port is in use
+port_in_use() {
+    local port="$1"
+    lsof -i ":$port" >/dev/null 2>&1
+}
+
+# Get PID using port
+get_pid_on_port() {
+    local port="$1"
+    lsof -t -i ":$port" 2>/dev/null | head -1
+}
+
+# Kill process on port
+kill_port() {
+    local port="$1"
+    local pid=$(get_pid_on_port "$port")
+    if [[ -n "$pid" ]]; then
+        kill "$pid" 2>/dev/null || true
+        sleep 0.5
+    fi
+}
+
+# Stop a server by name
+stop_server() {
+    local name="$1"
+
+    if ! find_server "$name"; then
+        log_error "Unknown server: $name"
+        return 1
+    fi
+
+    log_info "Stopping $SERVER_NAME..."
+
+    local stopped=false
+
+    # Try to kill by port
+    for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
+        if port_in_use "$port"; then
+            kill_port "$port"
+            stopped=true
+        fi
+    done
+
+    # Also try pkill by directory pattern
+    pkill -f "$SERVER_DIR" 2>/dev/null || true
+
+    sleep 1
+
+    # Verify stopped
+    local still_running=false
+    for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
+        if port_in_use "$port"; then
+            still_running=true
+            log_warning "Port $port still in use"
+        fi
+    done
+
+    if $still_running; then
+        log_error "Failed to fully stop $SERVER_NAME"
+        return 1
+    else
+        log_success "$SERVER_NAME stopped"
+    fi
+}
+
+# Start a server by name
+start_server() {
+    local name="$1"
+
+    if ! find_server "$name"; then
+        log_error "Unknown server: $name"
+        return 1
+    fi
+
+    log_info "Starting $SERVER_NAME..."
+
+    # Check if ports are free
+    for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
+        if port_in_use "$port"; then
+            log_warning "Port $port in use, killing process..."
+            kill_port "$port"
+            sleep 1
+        fi
+    done
+
+    # Start the server
+    cd "$SERVER_DIR"
+
+    # Run in background, redirect output to log file
+    local log_file="/tmp/${SERVER_NAME}.log"
+    nohup bash -c "$SERVER_CMD" > "$log_file" 2>&1 &
+    local pid=$!
+
+    # Wait for startup
+    sleep 3
+
+    # Verify started by checking HTTP port
+    if port_in_use "$HTTP_PORT"; then
+        log_success "$SERVER_NAME started (PID: $pid, HTTP: $HTTP_PORT)"
+
+        # Test health endpoint
+        local health=$(curl -s "http://localhost:$HTTP_PORT/health" 2>/dev/null || echo "")
+        if [[ -n "$health" ]]; then
+            log_success "Health check passed"
+        else
+            log_warning "Health endpoint not responding yet"
+        fi
+    else
+        log_error "$SERVER_NAME failed to start"
+        log_info "Check logs: $log_file"
+        return 1
+    fi
+}
+
+# Restart a server
+restart_server() {
+    local name="$1"
+    stop_server "$name" || true
+    sleep 1
+    start_server "$name"
+}
+
+# Show status of a server
+status_server() {
+    local name="$1"
+
+    if ! find_server "$name"; then
+        log_error "Unknown server: $name"
+        return 1
+    fi
+
+    echo -e "\n${BLUE}=== $SERVER_NAME ===${NC}"
+    echo "Directory: $SERVER_DIR"
+    echo "Ports: UDP=$UDP_PORT HTTP=$HTTP_PORT WS=$WS_PORT"
+
+    local running=false
+
+    # Check each port
+    for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
+        if port_in_use "$port"; then
+            local pid=$(get_pid_on_port "$port")
+            echo -e "Port $port: ${GREEN}IN USE${NC} (PID: $pid)"
+            running=true
+        else
+            echo -e "Port $port: ${YELLOW}FREE${NC}"
+        fi
+    done
+
+    # Test health if HTTP port is up
+    if port_in_use "$HTTP_PORT"; then
+        local health=$(curl -s "http://localhost:$HTTP_PORT/health" 2>/dev/null || echo "")
+        if [[ -n "$health" ]]; then
+            echo -e "Health: ${GREEN}OK${NC}"
+        else
+            echo -e "Health: ${RED}NO RESPONSE${NC}"
+        fi
+    fi
+
+    if $running; then
+        echo -e "Status: ${GREEN}RUNNING${NC}"
+    else
+        echo -e "Status: ${RED}STOPPED${NC}"
+    fi
+}
+
+# List all servers
+list_servers() {
+    echo -e "\n${BLUE}=== Available Servers ===${NC}"
+    for server in "${SERVERS[@]}"; do
+        parse_server "$server"
+        echo "  $SERVER_NAME (UDP:$UDP_PORT HTTP:$HTTP_PORT WS:$WS_PORT)"
+    done
+    echo ""
+}
+
+# Process all servers
+process_all() {
+    local action="$1"
+    for server in "${SERVERS[@]}"; do
+        parse_server "$server"
+        case "$action" in
+            start)   start_server "$SERVER_NAME" || true ;;
+            stop)    stop_server "$SERVER_NAME" || true ;;
+            restart) restart_server "$SERVER_NAME" || true ;;
+            status)  status_server "$SERVER_NAME" ;;
+        esac
+    done
+}
+
+# Main
+ACTION="${1:-help}"
+TARGET="${2:-}"
+
+case "$ACTION" in
+    start)
+        if [[ -z "$TARGET" ]]; then
+            log_error "Usage: $0 start [server-name|all]"
+            list_servers
+            exit 1
+        elif [[ "$TARGET" == "all" ]]; then
+            process_all start
+        else
+            start_server "$TARGET"
+        fi
+        ;;
+    stop)
+        if [[ -z "$TARGET" ]]; then
+            log_error "Usage: $0 stop [server-name|all]"
+            list_servers
+            exit 1
+        elif [[ "$TARGET" == "all" ]]; then
+            process_all stop
+        else
+            stop_server "$TARGET"
+        fi
+        ;;
+    restart)
+        if [[ -z "$TARGET" ]]; then
+            log_error "Usage: $0 restart [server-name|all]"
+            list_servers
+            exit 1
+        elif [[ "$TARGET" == "all" ]]; then
+            process_all restart
+        else
+            restart_server "$TARGET"
+        fi
+        ;;
+    status)
+        if [[ -z "$TARGET" || "$TARGET" == "all" ]]; then
+            process_all status
+        else
+            status_server "$TARGET"
+        fi
+        ;;
+    list)
+        list_servers
+        ;;
+    help|*)
+        echo "Server Management Script for BOP/Imminence MCP Servers"
+        echo ""
+        echo "Usage: $0 [command] [server-name|all]"
+        echo ""
+        echo "Commands:"
+        echo "  start   [name|all]  Start server(s)"
+        echo "  stop    [name|all]  Stop server(s)"
+        echo "  restart [name|all]  Restart server(s)"
+        echo "  status  [name|all]  Show server status"
+        echo "  list                List available servers"
+        echo "  help                Show this help"
+        echo ""
+        list_servers
+        ;;
+esac
