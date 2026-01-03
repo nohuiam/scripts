@@ -12,17 +12,33 @@ SERVERS=(
     "context-guardian|/Users/macbook/Documents/claude_home/repo/imminenceV2/context-guardian|node src/index.js|3001|8001|9001"
     "quartermaster|/Users/macbook/Documents/claude_home/repo/Quartermaster/quartermaster|node src/index.js|3002|8002|9002"
     "snapshot|/Users/macbook/Documents/claude_home/repo/snapSHOT|node src/index.js|3003|8003|9003"
+    "tool-registry|/Users/macbook/Documents/claude_home/repo/Toolee/Tool_Registry|node src/index.js|3004|8004|9004"
     "catasorter|/Users/macbook/Documents/claude_home/repo/Catasorter|node src/index.js|3005|8005|9005"
     "smart-file-organizer|/Users/macbook/Documents/claude_home/repo/smart_file_organizer|MCP_MODE=true node src/server.js|3007|8007|9007"
     "bonzai-bloat-buster|/Users/macbook/Documents/claude_home/repo/bonzai-bloat-buster|node dist/index.js|3008|8008|9008"
-    "enterspect|/Users/macbook/Documents/claude_home/repo/EnterSpect|node dist/index.js|3009|8009|9009"
+    "enterspect|/Users/macbook/Documents/claude_home/repo/EnterSpect|node index.js|3009|8009|9009"
     "neurogenesis-engine|/Users/macbook/Documents/claude_home/repo/neurogenesis-engine|node src/index.js|3010|8010|9010"
     "trinity-coordinator|/Users/macbook/Documents/claude_home/repo/trinitycoordinator|node dist/index.js|3012|8012|9012"
+    "claude-code-bridge|/Users/macbook/Documents/claude_home/repo/ClaudeCodeBridge|node build/index.js|3013|8013|9013"
     "project-context|/Users/macbook/Documents/claude_home/repo/project-context|node dist/index.js|3016|8016|9016"
     "knowledge-curator|/Users/macbook/Documents/claude_home/repo/knowledge-curator|node dist/index.js|3017|8017|9017"
     "pk-manager|/Users/macbook/Documents/claude_home/repo/pk-manager|node dist/index.js|3018|8018|9018"
     "intelligentrouter|/Users/macbook/Documents/claude_home/repo/intelligentrouter|node dist/index.js|3020|8020|9020"
     "verifier-mcp|/Users/macbook/Documents/claude_home/repo/verifier-mcp|node dist/index.js|3021|8021|9021"
+
+    # New servers (built Jan 2, 2026)
+    "safe-batch-processor|/Users/macbook/Documents/claude_home/repo/safe-batch-processor|node dist/index.js|3022|8022|9022"
+    "intake-guardian|/Users/macbook/Documents/claude_home/repo/intake-guardian|node dist/index.js|3023|8023|9023"
+    "health-monitor|/Users/macbook/Documents/claude_home/repo/health-monitor|node dist/index.js|3024|8024|9024"
+    "synapse-relay|/Users/macbook/Documents/claude_home/repo/synapse-relay|node dist/index.js|3025|8025|9025"
+    "filesystem-guardian|/Users/macbook/Documents/claude_home/repo/filesystem-guardian|node dist/index.js|3026|8026|9026"
+    "consolidation-engine|/Users/macbook/Documents/claude_home/repo/consolidation-engine|node dist/index.js|3032|8032|9032"
+
+    # Cognitive Architecture servers (built Jan 3, 2026)
+    "consciousness-mcp|/Users/macbook/Documents/claude_home/repo/consciousness-mcp|node dist/index.js|3028|8028|9028"
+    "skill-builder|/Users/macbook/Documents/claude_home/repo/skill-builder|node dist/index.js|3029|8029|9029"
+    "percolation-server|/Users/macbook/Documents/claude_home/repo/percolation-server|node dist/index.js|3030|8030|9030"
+    "experience-layer|/Users/macbook/Documents/claude_home/repo/experience-layer|node dist/index.js|3031|8031|9031"
 
     # HTTP-only servers (no UDP/WS)
     "looker|/Users/macbook/Documents/claude_home/repo/looker-mcp|node dist/index.js|-|8006|-"
