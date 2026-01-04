@@ -34,7 +34,8 @@ SERVERS=(
     "filesystem-guardian|/Users/macbook/Documents/claude_home/repo/filesystem-guardian|node dist/index.js|3026|8026|9026"
     "consolidation-engine|/Users/macbook/Documents/claude_home/repo/consolidation-engine|node dist/index.js|3032|8032|9032"
 
-    # Cognitive Architecture servers (built Jan 3, 2026)
+    # Cognitive Architecture servers (built Jan 3-4, 2026)
+    "tenets-server|/Users/macbook/Documents/claude_home/repo/tenets-server|node dist/index.js|3027|8027|9027"
     "consciousness-mcp|/Users/macbook/Documents/claude_home/repo/consciousness-mcp|node dist/index.js|3028|8028|9028"
     "skill-builder|/Users/macbook/Documents/claude_home/repo/skill-builder|node dist/index.js|3029|8029|9029"
     "percolation-server|/Users/macbook/Documents/claude_home/repo/percolation-server|node dist/index.js|3030|8030|9030"
