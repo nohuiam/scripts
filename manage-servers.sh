@@ -41,6 +41,22 @@ SERVERS=(
     "percolation-server|/Users/macbook/Documents/claude_home/repo/percolation-server|node dist/index.js|3030|8030|9030"
     "experience-layer|/Users/macbook/Documents/claude_home/repo/experience-layer|node dist/index.js|3031|8031|9031"
 
+    # NIWS decomposed servers (built Jan 9, 2026)
+    "niws-intake|/Users/macbook/Documents/claude_home/repo/niws-intake|node dist/index.js|3033|8033|9033"
+    "niws-analysis|/Users/macbook/Documents/claude_home/repo/niws-analysis|node dist/index.js|3034|8034|9034"
+    "niws-production|/Users/macbook/Documents/claude_home/repo/niws-production|node dist/index.js|3035|8035|9035"
+    "niws-delivery|/Users/macbook/Documents/claude_home/repo/niws-delivery|node dist/index.js|3036|8036|9036"
+
+    # Linus Inspector (built Jan 11, 2026)
+    "linus-inspector|/Users/macbook/Documents/claude_home/repo/linus-inspector|node dist/index.js|3037|8037|9037"
+
+    # FFmpeg Video Production Suite (built Jan 21-22, 2026)
+    "ffmpeg-clipper|/Users/macbook/Documents/claude_home/repo/ffmpeg-clipper|node dist/index.js|3039|8039|9039"
+    "ffmpeg-effects|/Users/macbook/Documents/claude_home/repo/ffmpeg-effects|node dist/index.js|3040|8040|9040"
+    "ffmpeg-transitions|/Users/macbook/Documents/claude_home/repo/ffmpeg-transitions|node dist/index.js|3041|8041|9041"
+    "ffmpeg-midi|/Users/macbook/Documents/claude_home/repo/ffmpeg-midi|node dist/index.js|3042|8042|9042"
+    "ffmpeg-timeline|/Users/macbook/Documents/claude_home/repo/ffmpeg-timeline|node dist/index.js|3043|8043|9043"
+
     # HTTP-only servers (no UDP/WS)
     "looker|/Users/macbook/Documents/claude_home/repo/looker-mcp|node dist/index.js|-|8006|-"
     "chronos-synapse|/Users/macbook/Documents/claude_home/repo/Chronos_Synapse|node dist/index.js|-|8011|-"
