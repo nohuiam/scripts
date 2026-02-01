@@ -57,6 +57,9 @@ SERVERS=(
     "ffmpeg-midi|/Users/macbook/Documents/claude_home/repo/ffmpeg-midi|node dist/index.js|3042|8042|9042"
     "ffmpeg-timeline|/Users/macbook/Documents/claude_home/repo/ffmpeg-timeline|node dist/index.js|3043|8043|9043"
 
+    # Edge Adapter (proxies to all servers)
+    "bop-gateway|/Users/macbook/Documents/claude_home/repo/bop-gateway|node dist/http/server.js|-|8000|-"
+
     # HTTP-only servers (no UDP/WS)
     "looker|/Users/macbook/Documents/claude_home/repo/looker-mcp|node dist/index.js|-|8006|-"
     "chronos-synapse|/Users/macbook/Documents/claude_home/repo/Chronos_Synapse|node dist/index.js|-|8011|-"
@@ -136,15 +139,26 @@ stop_server() {
         return 1
     fi
 
-    log_info "Stopping $SERVER_NAME..."
+    # Early exit: check if server is already stopped
+    local any_running=false
+    for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
+        if [[ "$port" != "-" ]] && port_in_use "$port"; then
+            any_running=true
+            break
+        fi
+    done
 
-    local stopped=false
+    if ! $any_running; then
+        log_success "$SERVER_NAME already stopped"
+        return 0
+    fi
+
+    log_info "Stopping $SERVER_NAME..."
 
     # Try to kill by port (skip "-" ports)
     for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
         if [[ "$port" != "-" ]] && port_in_use "$port"; then
             kill_port "$port"
-            stopped=true
         fi
     done
 
@@ -179,12 +193,22 @@ start_server() {
         return 1
     fi
 
+    # Early exit: check if server is already running and healthy
+    if [[ "$HTTP_PORT" != "-" ]] && port_in_use "$HTTP_PORT"; then
+        local health=$(curl -s --max-time 2 "http://localhost:$HTTP_PORT/health" 2>/dev/null || echo "")
+        if [[ -n "$health" ]]; then
+            log_success "$SERVER_NAME already running (HTTP: $HTTP_PORT)"
+            return 0
+        fi
+        # Port in use but not healthy - will be killed and restarted below
+        log_warning "$SERVER_NAME port in use but unhealthy, restarting..."
+    fi
+
     log_info "Starting $SERVER_NAME..."
 
     # Check if ports are free (skip "-" ports)
     for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
         if [[ "$port" != "-" ]] && port_in_use "$port"; then
-            log_warning "Port $port in use, killing process..."
             kill_port "$port"
             sleep 1
         fi
@@ -225,8 +249,28 @@ start_server() {
 # Restart a server
 restart_server() {
     local name="$1"
+
+    if ! find_server "$name"; then
+        log_error "Unknown server: $name"
+        return 1
+    fi
+
+    # Early exit: check if server is running (any port in use)
+    local any_running=false
+    for port in $UDP_PORT $HTTP_PORT $WS_PORT; do
+        if [[ "$port" != "-" ]] && port_in_use "$port"; then
+            any_running=true
+            break
+        fi
+    done
+
+    if ! $any_running; then
+        log_success "$SERVER_NAME already stopped (nothing to restart)"
+        return 0
+    fi
+
+    # Server is running - restart it
     stop_server "$name" || true
-    sleep 1
     start_server "$name"
 }
 
